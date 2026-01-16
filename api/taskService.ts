@@ -1,6 +1,10 @@
 import { Task } from '../type/Task';
 
-const baseURL = 'http://localhost:7060/api/task/';
+const baseURL = 'http://localhost:7060/api/task';
+
+interface TaskDTO {
+    title: string;
+}
 
 // GET all tasks
 export const fetchTasks = async (): Promise<Task[]> => {
@@ -10,7 +14,7 @@ export const fetchTasks = async (): Promise<Task[]> => {
 }
 
 // CREATE a new task
-export const createTask = async (task: Task): Promise<string> => {
+export const createTask = async (task: TaskDTO): Promise<string> => {
     const response = await fetch(baseURL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -20,7 +24,7 @@ export const createTask = async (task: Task): Promise<string> => {
     return await response.json();
 }
 
-export const updateTask = async (task: Task, Id: string): Promise<string> => {
+export const updateTask = async (task: TaskDTO, Id: string): Promise<string> => {
     const response = await fetch(`${baseURL}/${Id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
