@@ -1,6 +1,6 @@
 import { Task } from '../type/Task';
 
-const baseURL = 'http://localhost:7060/api/task';
+const baseURL = 'https://localhost:7060/api/task';
 
 interface TaskDTO {
     title: string;
