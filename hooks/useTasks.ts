@@ -16,14 +16,20 @@ export const useTasks = () => {
             .withUrl('https://localhost:7060/taskHub',{
                 withCredentials: true
             })
-            .withAutomaticReconnect()
-            .configureLogging(signalR.LogLevel.Information)
+            .withAutomaticReconnect()  // auto retry on disconnect
+            .configureLogging(signalR.LogLevel.Information) //log connection info(What needed only)
             .build();
 
         connection.start();
-        connection.on('TaskCreated', (task) => dispatch(addTask(task)));
-        connection.on('TaskUpdated', (task) => dispatch(updateTask(task)));
-        connection.on('TaskDeleted', (id) => dispatch(deleteTask(id)));
+        connection.on('TaskCreated', (task) => { 
+            dispatch(addTask(task)); 
+        });
+        connection.on('TaskUpdated', (task) => { 
+            dispatch(updateTask(task)); 
+        });
+        connection.on('TaskDeleted', (id) => { 
+            dispatch(deleteTask(id)); 
+        });
 
         return () => { connection.stop(); }
     }, [dispatch]);
