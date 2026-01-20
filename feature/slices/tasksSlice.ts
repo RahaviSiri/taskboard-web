@@ -1,8 +1,21 @@
+import { TaskStatus } from '@/enums/TaskStatus';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+
+export type TStatus = TaskStatus.Pending | TaskStatus.InProgress | TaskStatus.Completed;
+
+interface SubTask {
+  title: string;
+  description: string;
+  order: number;
+}
 
 interface Task {
   id: string;
   title: string;
+  description: string;
+  startDate: string;
+  subTasks: SubTask[];
+  status: TStatus;
 }
 
 interface TaskState {

@@ -3,131 +3,213 @@
 import { useTasks } from '../../hooks/useTasks';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../feature/store';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { updateTask, deleteTask, createTask } from '../../api/taskService';
 import { useState } from 'react';
+import { SubTask } from '@/type/SubTask';
+import TaskCard from '@/components/TaskCard';
 
 export default function TaskPage() {
   const [showForm, setShowForm] = useState(false);
-  const [inputValue, setInputValue] = useState('');
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null); 
-  // track which task we are editing
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [subTaskTitle, setSubTaskTitle] = useState('');
 
-  // CONNECT THE HOOK
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    startDate: '',
+    subTasks: [] as SubTask[],
+    status: 'Pending'
+  });
+
   useTasks();
-
-  // Read data from Redux
   const tasks = useSelector((state: RootState) => state.tasks.tasks);
 
-  // Handle clicking edit
-  const handleUpdateClick = (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
-
-    setEditingTaskId(taskId); // store the id of the task being edited
-    setInputValue(task.title); // populate the input with the task title
-    setShowForm(true); // show the form if hidden
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle deleting a task
+  const addSubTask = () => {
+    if (!subTaskTitle.trim()) return;
+    setFormData(prev => ({
+      ...prev,
+      subTasks: [
+        ...prev.subTasks,
+        { title: subTaskTitle, description: '', order: prev.subTasks.length + 1 }
+      ]
+    }));
+    setSubTaskTitle('');
+  };
+
+  const removeSubTask = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      subTasks: prev.subTasks.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleUpdateClick = (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    setEditingTaskId(id);
+    setFormData({
+      title: task.title,
+      description: task.description,
+      startDate: task.startDate
+        ? task.startDate.split('T')[0]
+        : '',
+      subTasks: task.subTasks,
+      status: task.status
+    });
+
+    setShowForm(true);
+  };
+
+  // Handle deleting a task 
   const handleDelete = async (id: string) => {
     try {
       await deleteTask(id);
       console.log("Task deleted");
-    } catch (error) {
+    }
+    catch (error) {
       console.error("Failed to delete task:", error);
     }
   };
 
-  // Handle form submission (add or update)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.title.trim()) return;
 
-    if (!inputValue.trim()) return; // ignore empty input
+    editingTaskId
+      ? await updateTask(formData, editingTaskId)
+      : await createTask(formData);
 
-    try {
-      if (editingTaskId) {
-        // Update existing task
-        await updateTask({ title: inputValue }, editingTaskId);
-        setEditingTaskId(null); // reset edit mode
-      } else {
-        // Create new task
-        await createTask({ title: inputValue });
-      }
-
-      setInputValue(''); // clear input
-      setShowForm(false); // close form
-    } catch (error) {
-      console.error("Failed to submit task:", error);
-    }
+    setShowForm(false);
+    setEditingTaskId(null);
+    setFormData({
+      title: '',
+      description: '',
+      startDate: '',
+      subTasks: [],
+      status: 'Pending'
+    });
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gray-50 p-8">
-      <h1 className="text-4xl font-extrabold text-gray-800 mb-6">📝 Task Manager</h1>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <h1 className="text-4xl font-bold text-center mb-8">📝 Task Manager</h1>
 
-      {/* Toggle Add/Edit Form */}
-      <button
-        onClick={() => {
-          setShowForm(!showForm);
-          setEditingTaskId(null); // reset editing if opening form manually
-          setInputValue('');
-        }}
-        className="mb-6 bg-blue-600 text-white px-6 py-2 rounded-full shadow hover:bg-blue-700 transition"
-      >
-        {showForm ? 'Close Form' : 'Add Task'}
-      </button>
+      <div className="flex justify-center mb-6">
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700"
+        >
+          {showForm ? 'Close Form' : 'Add Task'}
+        </button>
+      </div>
 
-      {/* Add/Edit Task Form */}
+      {/* FORM */}
       {showForm && (
-        <div className="mb-6 w-full max-w-md bg-white p-6 rounded-lg shadow-md">
-          <form onSubmit={handleSubmit} className="flex flex-col space-y-3">
+        <div className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow mb-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              type="text"
-              placeholder="Task Title"
-              className="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              placeholder="Task title"
+              className="w-full border px-4 py-2 rounded"
             />
+
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              placeholder="Task description"
+              className="w-full border px-4 py-2 rounded"
+            />
+
+            <input
+              type="date"
+              name="startDate"
+              value={formData.startDate}
+              onChange={handleChange}
+              className="w-full border px-4 py-2 rounded"
+            />
+
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              className="w-full border px-4 py-2 rounded"
+            >
+              <option value="Pending">Pending</option>
+              <option value="InProgress">In Progress</option>
+              <option value="Completed">Completed</option>
+            </select>
+
+            {/* SUBTASKS */}
+            <div>
+              <div className="flex gap-2">
+                <input
+                  value={subTaskTitle}
+                  onChange={e => setSubTaskTitle(e.target.value)}
+                  placeholder="Add subtask"
+                  className="flex-1 border px-3 py-2 rounded"
+                />
+                <button
+                  type="button"
+                  onClick={addSubTask}
+                  className="bg-green-500 text-white px-3 rounded"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+
+              <ul className="mt-2 space-y-1">
+                {formData.subTasks.map((st, i) => (
+                  <li key={i} className="flex justify-between bg-gray-100 px-3 py-1 rounded">
+                    <span>{st.title}</span>
+                    <X
+                      size={16}
+                      className="cursor-pointer text-red-500"
+                      onClick={() => removeSubTask(i)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <button
               type="submit"
-              className={`px-4 py-2 rounded text-white ${
-                editingTaskId ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'
-              } transition`}
+              className={`w-full py-2 rounded text-white ${editingTaskId ? 'bg-yellow-500' : 'bg-green-600'
+                }`}
             >
-              {editingTaskId ? 'Update Task' : 'Add Task'}
+              {editingTaskId ? 'Update Task' : 'Create Task'}
             </button>
           </form>
         </div>
       )}
 
-      {/* Task List */}
-      <div className="w-full max-w-3xl">
+      {/* TASK LIST */}
+      <div className="max-w-3xl mx-auto space-y-4">
         {tasks.length === 0 ? (
-          <p className="text-gray-400 text-center italic">No tasks found</p>
+          <p className="text-center text-gray-400 italic">No tasks found</p>
         ) : (
-          <ul className="space-y-3">
-            {tasks.map(task => (
-              <li
-                key={task.id}
-                className="p-4 bg-white rounded-lg shadow flex justify-between items-center hover:bg-gray-50 transition"
-              >
-                <span className="font-medium text-gray-700">{task.title}</span>
-                <div className="flex gap-3">
-                  <Pencil
-                    className="text-blue-500 cursor-pointer hover:text-blue-600 transition"
-                    onClick={() => handleUpdateClick(task.id)}
-                  />
-                  <Trash2
-                    className="text-red-500 cursor-pointer hover:text-red-600 transition"
-                    onClick={() => handleDelete(task.id)}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
+          tasks.map(task => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              onEdit={handleUpdateClick}
+              onDelete={handleDelete}
+            />
+          ))
         )}
       </div>
+
     </div>
   );
 }
