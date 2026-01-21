@@ -57,7 +57,10 @@ export default function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
                 key={index}
                 className="text-sm bg-gray-100 px-3 py-1 rounded flex justify-between"
               >
-                <span>{subTask.title}</span>
+                <div className='flex flex-col gap-2'>
+                  <span className='font-bold'>Title : {subTask.title}</span>
+                  <span>Description : {subTask.description}</span>
+                </div>
                 <span className="text-xs text-gray-400">#{subTask.order}</span>
               </li>
             ))}
