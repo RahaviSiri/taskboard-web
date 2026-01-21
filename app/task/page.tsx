@@ -13,6 +13,7 @@ export default function TaskPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [subTaskTitle, setSubTaskTitle] = useState('');
+  const [subTaskDescription, setSubTaskDescription] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -22,9 +23,12 @@ export default function TaskPage() {
     status: 'Pending'
   });
 
+  // Call custom hook to fetch tasks
   useTasks();
+
   const tasks = useSelector((state: RootState) => state.tasks.tasks);
 
+  // Handle form input changes
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -38,10 +42,11 @@ export default function TaskPage() {
       ...prev,
       subTasks: [
         ...prev.subTasks,
-        { title: subTaskTitle, description: '', order: prev.subTasks.length + 1 }
+        { title: subTaskTitle, description: subTaskDescription, order: prev.subTasks.length + 1 }
       ]
     }));
     setSubTaskTitle('');
+    setSubTaskDescription('');
   };
 
   const removeSubTask = (index: number) => {
@@ -96,6 +101,26 @@ export default function TaskPage() {
       startDate: '',
       subTasks: [],
       status: 'Pending'
+    });
+    setSubTaskDescription('');
+    setSubTaskTitle('');
+  };
+
+  const moveSubTask = (index: number, direction: 'up' | 'down') => {
+    setFormData(prev => {
+      const updated = [...prev.subTasks];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+      if (targetIndex < 0 || targetIndex >= updated.length) return prev;
+
+      [updated[index], updated[targetIndex]] =
+        [updated[targetIndex], updated[index]];
+
+      // Recalculate order
+      return {
+        ...prev,
+        subTasks: updated.map((st, i) => ({ ...st, order: i + 1 }))
+      };
     });
   };
 
@@ -153,34 +178,75 @@ export default function TaskPage() {
 
             {/* SUBTASKS */}
             <div>
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <input
                   value={subTaskTitle}
                   onChange={e => setSubTaskTitle(e.target.value)}
-                  placeholder="Add subtask"
-                  className="flex-1 border px-3 py-2 rounded"
+                  placeholder="Subtask title"
+                  className="w-full border px-3 py-2 rounded"
                 />
+
+                <textarea
+                  value={subTaskDescription}
+                  onChange={e => setSubTaskDescription(e.target.value)}
+                  placeholder="Subtask description"
+                  className="w-full border px-3 py-2 rounded"
+                />
+
                 <button
                   type="button"
                   onClick={addSubTask}
-                  className="bg-green-500 text-white px-3 rounded"
+                  className="bg-green-500 text-white px-3 py-2 rounded flex items-center gap-1"
                 >
-                  <Plus size={18} />
+                  <Plus size={16} /> Add Subtask
                 </button>
               </div>
 
-              <ul className="mt-2 space-y-1">
+              <ul className="mt-2 space-y-2">
                 {formData.subTasks.map((st, i) => (
-                  <li key={i} className="flex justify-between bg-gray-100 px-3 py-1 rounded">
-                    <span>{st.title}</span>
-                    <X
-                      size={16}
-                      className="cursor-pointer text-red-500"
-                      onClick={() => removeSubTask(i)}
-                    />
+                  <li
+                    key={i}
+                    className="bg-gray-100 px-3 py-2 rounded space-y-1"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">
+                        {st.order}. {st.title}
+                      </span>
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={i === 0}
+                          onClick={() => moveSubTask(i, 'up')}
+                          className="text-xs bg-gray-300 px-2 rounded disabled:opacity-50"
+                        >
+                          up
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={i === formData.subTasks.length - 1}
+                          onClick={() => moveSubTask(i, 'down')}
+                          className="text-xs bg-gray-300 px-2 rounded disabled:opacity-50"
+                        >
+                          down
+                        </button>
+
+                        <X
+                          size={16}
+                          className="cursor-pointer text-red-500"
+                          onClick={() => removeSubTask(i)}
+                        />
+                      </div>
+                    </div>
+
+                    {st.description && (
+                      <p className="text-sm text-gray-600">{st.description}</p>
+                    )}
                   </li>
                 ))}
               </ul>
+
             </div>
 
             <button
